@@ -1,0 +1,66 @@
+
+
+Gender is a winner here. 
+Men are more likely than women to (A) contract coronavirus (B) die from it.
+
+While this could be thought of as biological, it could also be behavioral. 
+
+We know men take loads of risks in other domains. Maybe men are going out and taking 
+more risks.
+
+We can test this because we have social distaincing by census block, and we can impute
+gender across the different census blocks.
+
+===============================================================================
+
+1. Are there places that are currently open now but not safely? To put more of a
+point on it, we have been allowing parks to open. Are we achieving a safe capacity, there?
+
+    We have visits by hour to places in the weekly-patterns dataset.
+    Can we find unsafe hours?
+
+2. We are currently arguing how to re-open safely. Can you show a way that it can be done?
+One thing we can do is to sort places by baseline traffic. 
+
+3. If you start locally -- in Cary -- where are people going? 
+
+4. Men are more likely than women to get the coronavirus and to die from it. Why?
+
+    I think it's BEHAVIORAL not BIOLOGICAL. Men are GOING OUT more in 
+    RISKY WAYS.
+
+    I could test it: for each census block I know the gender and how good social
+    distancing is.
+
+
+
+
+=======================================================================
+
+Spending
+Movement
+
+
+Can I predictively tell when an outbreak will occur, stop?
+
+Could you micro-police, where you drive different policies for different areas?
+What might make a difference?
+
+Which places, as currently open NOW, are unsafe? How good are we at having social distancing
+in the grocery store, for example?
+
+
+1. What time can I go to ....?
+2. What are people spending their money on, now?
+3. How often are people going out, and where are they going?
+4. Does stay-at-home work?
+
+1. When is it safe to go to the X? E.g. what time?
+2. What is the impact of the new Georgia re-opening?
+
+
+What makes people stay at home right now? Is it political?
+
+
+
+
