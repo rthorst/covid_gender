@@ -2,98 +2,77 @@
 
 Currently, just census microdata.
 """
+import csv
 import numpy as np
 import pandas as pd
-
+from scipy.stats import spearmanr
 
 def preprocess_census_data():
-    """preprocess census data to clean CSV
+    """preprocess census data to clean CSV"""
 
+    # Load a mapping of various geoegraphies to total number of male and female residents.
+    state_fips_codes = []
+    county_fips_codes = []
+    numbers_of_males = []
+    numbers_of_females = []
 
-    """
+    DATA_P = "../data/census-2018-pop.csv"
+    f = open(DATA_P, "r", errors="ignore")
+    r = csv.reader(f)
 
-    """
-    Load census data into individual arrays, one per variable.
-    As the data is loaded, perform simple data cleaning.
-        health_data : 1 excellent .... 5 poor
-        county_data: county fips code e.g. 00004
-            first two digits: state e.g. 01
-            last three digits: county e.g. 004
-        male_data: 1 male, 0 female, nan missing
-    """
-    health_data = [] # (1 excellent ... 5 poor)
-    county_data = [] # county fips code, e.g. 00004
-    male_data = [] # 1 male, 0 female, nan = missing
+    STATE_COLNUM = 1
+    COUNTY_COLNUM = 2
+    MALE_COLNUM = 8
+    FEMALE_COLNUM = 9
 
-    """ Extract and recode data """
-    DATA_P = "../data/cps_00001.dat"
-    counter = 0
-    for data_row in open(DATA_P, "r").readlines():
-
-        # Counter.
-        counter += 1
-        if counter % 250000 == 0:
-            print("\t...{}".format(counter))
+    header = next(r) # skip header
+    for row in r:
 
         try:
 
-            # Extract Data
-            county = data_row[51:56]
-            print(county)
-            smoked_100_cigarettes = data_row[110:112]
-            male = data_row[105]
-            health = data_row[109]
-
-            assert int(county[:2]) <= 50
-
-            """ Recode Data """
-
-            # Recode health -> (1-5 integer)
-            health = int(health)
-            assert (health > 0) and (health <= 5)
-
-            # Recode male -> (0-1 integer)
-            if male == "1":
-                male = 1
-            elif male == "2":
-                male = 0
-            else:
-                male = np.nan
-
-            """ Add data for this row to data structures """
-            health_data.append(health)
-            county_data.append(str(county))
-            male_data.append(male)
+            # Extract data.
+            state_fips_codes.append(row[STATE_COLNUM])
+            county_fips_codes.append(row[COUNTY_COLNUM])
+            numbers_of_males.append(int(row[MALE_COLNUM]))
+            numbers_of_females.append(int(row[FEMALE_COLNUM]))
 
         except Exception as e:
-            print(counter, e)
-            continue 
+            print(e)
 
-    """ 
-    Average data by county, 
-    casting the data to a pandas dataframe
-    """
 
-    # Cast to datafarme.
-    data_dictionary = {"county_fips" : county_data, 
-            "male" : male_data, 
-            "health": health_data}
-    individuals_census_dataframe = pd.DataFrame(data=data_dictionary)
+    # Write to pandas dataframe.
+    data_dictionary = {
+        "state_fips" : state_fips_codes,
+        "county_fips" : county_fips_codes,
+        "num_males" : numbers_of_males,
+        "num_females" : numbers_of_females
+    }
+    df = pd.DataFrame(data=data_dictionary)
+    df["state_plus_county_fips"] = [s + c for s, c in zip(df.state_fips, df.county_fips)]
 
-    # Average data by county.
-    counties_census_dataframe = individuals_census_dataframe.groupby(
-            "county_fips").mean() 
-    print(counties_census_dataframe)
+    # Summarize (add) by state / county FIPS code.
+    data_by_county = df[["state_plus_county_fips", "num_males", "num_females"]].groupby(
+            "state_plus_county_fips").sum()
+    print(data_by_county)
 
-    # Save.
-    of_p = "../data/census_data_by_county.csv"
-    counties_census_dataframe.to_csv(of_p)
+    # Calculate proportion male.
+    data_by_county["proportion_male"] = data_by_county["num_males"] / (
+            data_by_county["num_males"] + data_by_county["num_females"])
+
+
+    # Write output.
+    of_p = "../data/census_gender_by_county.csv"
+    with open(of_p, "w", newline="") as of:
+        w = csv.writer(of)
+        header = ["county_fips", "prop_male"]
+        w.writerow(header)
+        for prop_male, county_fips in zip(data_by_county.proportion_male, data_by_county.index):
+            w.writerow([str(county_fips).zfill(5), prop_male])
 
 def preprocess_distancing_data():
-    """todo: make me"""
     
     # Load safegraph data.
-    safegraph_data_p = "../data/safegraph/2020-04-24-social-distancing.csv"
+    safegraph_data_p = "../data/safegraph/2020-04-23-social-distancing.csv"
     safegraph_dataframe = pd.read_csv(safegraph_data_p)
     """
     Summarize the data (by adding) as a function of the 
@@ -135,7 +114,7 @@ def merge_census_and_distancing_data():
 
     # Load census and distancing data.
     SAFEGRAPH_DATA_P = "../data/safegraph_aggregated_4_24_by_county.csv"
-    CENSUS_DATA_P = "../data/census_data_by_county.csv"
+    CENSUS_DATA_P = "../data/census_gender_by_county.csv"
     safegraph_dataframe = pd.read_csv(SAFEGRAPH_DATA_P)
     census_dataframe = pd.read_csv(CENSUS_DATA_P)
 
@@ -172,7 +151,19 @@ def merge_census_and_distancing_data():
     print(merged_dataframe.head())
     print(len(merged_dataframe))
 
+
+def analyze_merged_data():
+
+    # load merged data.
+    df = pd.read_csv("../data/census_and_safegraph_data_merged.csv")
+
+    # correlate gender with staying at home
+    rho, p = spearmanr(df.prop_male, df.proportion_stayed_at_home)
+    print("correlation of male with stay at home, rho = {:.4f} p = {:.4f}".format(rho, p))
+    print(len(df))
+
 if __name__ == "__main__":
-    preprocess_census_data()
-    #preprocess_distancing_data()
-    #merge_census_and_distancing_data()
+    #preprocess_census_data()
+    preprocess_distancing_data()
+    merge_census_and_distancing_data()
+    analyze_merged_data()
