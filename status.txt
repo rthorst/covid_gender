@@ -1,3 +1,9 @@
-Pretty sure that men stay at home less.
+High-level plan.
 
-TODO: spend time tonight cleaning up the code.
+1. Do men socially distance less?
+    [I think so: tested for one or two days
+     Try it for a lot of days]
+
+2. If so, does this explain different rates of COVID infection?
+
+
