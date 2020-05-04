@@ -72,53 +72,55 @@ def preprocess_census_data():
     (df.index) will house the 5-digit county fips code.
     """
 
-    # Write each individual row of data to a high-level dataframe
-    # object, for easier summarization. 
+    # Calculate the 5-digit county fips code for each row of data,
+    # by concatenating the 2-digit state code with the 3-digit county
+    # code.
     state_plus_county_fips = [
             state_fips + county_fips 
             for state_fips, county_fips 
             in zip(state_fips_codes, county_fips_codes)
             ]
-    individual_rows_data_dictionary = {
-        "county_fips" : state_plus_county_fips # 5 digits: state+county.
-        "num_males" : numbers_of_males,
-        "num_females" : numbers_of_females
-        }
-    individual_rows_dataframe = pd.DataFrame(data=individual_rows_data_dictionary)
+    
+    # Aggregate to count the number of males and females in each 
+    # 5-digit county fips code.
+    county_fips_to_number_of_males = {fips : 0 
+            for fips in state_plus_county_fips}
+    county_fips_to_number_of_females = {fips : 0 
+            for fips in state_plus_county_fips}
+    disaggregated_data_iterator = zip(state_plus_county_fips, 
+            numbers_of_males, 
+            numbers_of_females)
+    
+    for county_fips, number_of_males, number_of_females in disaggregated_data_iterator:
+        county_fips_to_number_of_males[county_fips] += number_of_males
+        county_fips_to_number_of_females[county_fips] += number_of_females
+    
+    # Transform raw gender counts to proportions for each county.
+    county_fips_to_proportion_male = {}
+    for county_fips in state_plus_county_fips:
+        num_males = county_fips_to_number_of_males[county_fips]
+        num_females = county_fips_to_number_of_females[county_fips]
+        proportion_male = (num_males / (num_males + num_females))
 
-    # Summarize data by county, by adding multiple rows corresponding
-    # to the same county.
-    census_data_by_county = individual_rows_dataframe.groupby("county_fips").sum()
-
-    # Calculate proportion male column (male / male+female)
-    proportions_male = [num_males / (num_males + num_females)
-            for num_males, num_females in 
-            zip(census_data_by_county.num_males, 
-            census_data_by_county.num_females)]
-    census_data_by_county["proportion_male"] = proportions_male
-
+        county_fips_to_proportion_male[county_fips] = proportion_male
 
     """Write gender by county to disk.
-
-    Note that we must be very careful with county fips codes, which 
-    can be 0-padded and must have width 5. 
-
-    Thus we write the dataframe 'by hand', ensuring that county fips 
-    codes are formatted properly.
     """
-
-    # Write output.
+    
     of_p = "../data/census_gender_by_county.csv"
     with open(of_p, "w", newline="") as of:
     
+        # Write header.
         csv_writer_object = csv.writer(of)
         header = ["county_fips", "prop_male"]
         csv_writer_object.writerow(header)
         
-        for county_fips, prop_male in zip(census_data_by_county.index, census_data_by_county.proportion_male):
-            county_fips_padded = str(county_fips).zfill(5)
-            data_row = [county_fips_padded, prop_male]
+        # Write individual rows of data.
+        for county_fips, proportion_male in county_fips_to_proportion_male.items():
+            data_row = [county_fips, proportion_male]
             csv_writer_object.writerow(data_row)
+
+
 
 def preprocess_distancing_data():
     
@@ -214,7 +216,7 @@ def analyze_merged_data():
     print(len(df))
 
 if __name__ == "__main__":
-    #preprocess_census_data()
-    preprocess_distancing_data()
-    merge_census_and_distancing_data()
-    analyze_merged_data()
+    preprocess_census_data()
+    #preprocess_distancing_data()
+    #merge_census_and_distancing_data()
+    #analyze_merged_data()
