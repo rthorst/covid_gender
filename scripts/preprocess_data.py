@@ -127,41 +127,60 @@ def preprocess_distancing_data():
     # Load safegraph data.
     safegraph_data_p = "../data/safegraph/2020-04-23-social-distancing.csv"
     safegraph_dataframe = pd.read_csv(safegraph_data_p)
-    """
-    Summarize the data (by adding) as a function of the 
-    county FIPS code, which is the first 5 digits of the
-    12-digit block code.
-        digits 1-2 = state
-        digits 3-5 = county
-        digits 6-11 = tract
-        digit 12 = block group
+    
+    """Aggregate the data by county
+    
+    The data are disaggregated to census block codes (12-digit codes).
+    The first five digits of the code indicate the county 
+        (1-2 : state   ....   3-5 : county)
+
+    Thus we extract the county for each census block and add different
+    rows belonging to the same county.
     """
     
-    # Add a column for county fips code
+    # Extract county fips codes.
     county_fips_codes = []
     for full_fips_code in safegraph_dataframe["origin_census_block_group"].values:
         county_fips_code = str(full_fips_code)[:5]
         county_fips_codes.append(county_fips_code)
-    safegraph_dataframe["county_fips"] = county_fips_codes
     
-    # Summarize (by adding) the device_count and
-    # completely_home_device_count by county. 
-    keep_colnames = ["county_fips", "device_count", "completely_home_device_count"]
-    safegraph_data_by_county = safegraph_dataframe[keep_colnames].groupby(
-            by="county_fips").sum()
-    print(safegraph_data_by_county)
+    # Summarize phone counts by county.
+    # device_count is the total number of phones for people who live in this area.
+    # completely_home_device_count is number of those phones that never left home
+    #   during the specific time period.
+    county_fips_to_device_count = {fips: 0 for fips in county_fips_codes}
+    county_fips_to_completely_home_count = {fips: 0 for fips in county_fips_codes}
+    county_data_iterator = zip(
+            county_fips_codes,
+            safegraph_dataframe.device_count.values,
+            safegraph_dataframe.completely_home_device_count.values
+            )
+    for county_fips, device_count, completely_home_count in county_data_iterator:
+        county_fips_to_device_count[county_fips] += device_count
+        county_fips_to_completely_home_count[county_fips] += completely_home_count
 
-    # Calculate a social distancing proportion for each block group, defined as 
-    # the proportion of devices who stayed completely at home during the period.
-    safegraph_data_by_county["proportion_stayed_at_home"] = (
-            safegraph_data_by_county["completely_home_device_count"] / 
-            safegraph_data_by_county["device_count"])
-    
+    # Calculate the proportion of people in each county who stayed completel 
+    # at home.
+    county_fips_to_proportion_completely_at_home = {}
+    for county_fips, device_count in county_fips_to_device_count.items():
+        
+        completely_home_count = county_fips_to_completely_home_count[county_fips]
+        prop_completely_at_home = (completely_home_count / device_count)
+
+        county_fips_to_proportion_completely_at_home[county_fips] = (
+                prop_completely_at_home)
+
     # Save data.
     of_p = "../data/safegraph_aggregated_4_24_by_county.csv"
-    write_colnames = ["proportion_stayed_at_home"]
-    safegraph_data_by_county[write_colnames].to_csv(of_p)
-    print(safegraph_data_by_county.head())
+    with open(of_p, "w", newline="") as of:
+
+        csv_writer_object = csv.writer(of)
+        header = ["county_fips", "proportion_stayed_at_home"]
+        csv_writer_object.writerow(header)
+
+        for county_fips, proportion_at_home in county_fips_to_proportion_completely_at_home.items():
+            data_row = [county_fips, proportion_at_home]
+            csv_writer_object.writerow(data_row)
 
 def merge_census_and_distancing_data():
 
@@ -216,7 +235,7 @@ def analyze_merged_data():
     print(len(df))
 
 if __name__ == "__main__":
-    preprocess_census_data()
-    #preprocess_distancing_data()
+    #preprocess_census_data()
+    preprocess_distancing_data()
     #merge_census_and_distancing_data()
     #analyze_merged_data()
