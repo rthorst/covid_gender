@@ -242,12 +242,12 @@ def analyze_merged_data():
     df = pd.read_csv("../data/census_and_safegraph_data_merged.csv")
 
     # correlate gender with staying at home
-    rho, p = spearmanr(df.prop_male, df.proportion_stayed_at_home)
+    rho, p = spearmanr(df.proportion_male, df.proportion_stayed_at_home)
     print("correlation of male with stay at home, rho = {:.4f} p = {:.4f}".format(rho, p))
     print(len(df))
 
 if __name__ == "__main__":
     #preprocess_census_data()
     #preprocess_distancing_data()
-    merge_census_and_distancing_data()
-    #analyze_merged_data()
+    #merge_census_and_distancing_data()
+    analyze_merged_data()
