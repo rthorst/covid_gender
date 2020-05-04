@@ -135,7 +135,7 @@ def preprocess_distancing_data(date="04-23"):
     """
     
     # Load safegraph data.
-    safegraph_data_p = "../data/safegraph/2020-04-23-social-distancing.csv"
+    safegraph_data_p = "../data/safegraph/2020-{}-social-distancing.csv".format(date)
     safegraph_dataframe = pd.read_csv(safegraph_data_p)
     
     """Aggregate the data by county
@@ -192,12 +192,12 @@ def preprocess_distancing_data(date="04-23"):
             data_row = [county_fips, proportion_at_home]
             csv_writer_object.writerow(data_row)
 
-def merge_census_and_distancing_data():
+def merge_census_and_distancing_data(date="04-23"):
     """ Write census and social distancing data to a single file.
 
     Input files
     -----------
-    ../data/safegraph_aggregated_4_24_by_county.csv
+    ../data/safegraph_aggregated_{}_by_county.csv
     ../data/census_gender_by_county.csv
 
     Output file
@@ -206,7 +206,7 @@ def merge_census_and_distancing_data():
     """
 
     # Load census and distancing data.
-    SAFEGRAPH_DATA_P = "../data/safegraph_aggregated_4_24_by_county.csv"
+    SAFEGRAPH_DATA_P = "../data/safegraph_aggregated_{}_by_county.csv".format(date)
     CENSUS_DATA_P = "../data/census_gender_by_county.csv"
     safegraph_dataframe = pd.read_csv(SAFEGRAPH_DATA_P)
     census_dataframe = pd.read_csv(CENSUS_DATA_P)
@@ -254,10 +254,13 @@ def analyze_merged_data():
     # correlate gender with staying at home
     rho, p = spearmanr(df.proportion_male, df.proportion_stayed_at_home)
     print("correlation of male with stay at home, rho = {:.4f} p = {:.4f}".format(rho, p))
-    print(len(df))
 
 if __name__ == "__main__":
     #preprocess_census_data()
-    #preprocess_distancing_data()
-    #merge_census_and_distancing_data()
-    analyze_merged_data()
+
+    days = ["01", "07", "13", "23", "24"]
+    for day in days:
+        date = "04-{}".format(day)
+        preprocess_distancing_data(date)
+        merge_census_and_distancing_data(date)
+        analyze_merged_data()
