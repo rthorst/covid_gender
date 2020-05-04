@@ -10,7 +10,21 @@ from scipy.stats import spearmanr
 def preprocess_census_data():
     """preprocess census data to clean CSV"""
 
-    # Load a mapping of various geoegraphies to total number of male and female residents.
+    """Load census data. 
+
+    The data are highly disaggregated; specifically, 
+    there are many rows for each county, each row 
+    corresponding to a specific subgroup.
+
+    Thus, the next step will be to aggreagate (sum) 
+    the rows across counties.
+
+    We populate the following arrays, one per row of data:
+        state_fips_codes []  # e.g. 01
+        county_fips_codes [] # e.g. 107
+        numbers_of_males = [] # e.g. 402135, raw count.
+        numbers_of_females = [] e.g. 314314, raw count.
+    """
     state_fips_codes = []
     county_fips_codes = []
     numbers_of_males = []
@@ -30,44 +44,81 @@ def preprocess_census_data():
 
         try:
 
-            # Extract data.
-            state_fips_codes.append(row[STATE_COLNUM])
-            county_fips_codes.append(row[COUNTY_COLNUM])
-            numbers_of_males.append(int(row[MALE_COLNUM]))
-            numbers_of_females.append(int(row[FEMALE_COLNUM]))
+            # extract data.
+            state_fips_code = row[STATE_COLNUM]
+            county_fips_code = row[COUNTY_COLNUM]
+            number_of_males = int(row[MALE_COLNUM])
+            number_of_females = int(row[FEMALE_COLNUM])
+
+            # add data for this row to the data structures
+            # containing data for all rows.
+            state_fips_codes.append(state_fips_code)
+            county_fips_codes.append(county_fips_code)
+            numbers_of_males.append(number_of_males)
+            numbers_of_females.append(number_of_females)
 
         except Exception as e:
             print(e)
 
 
-    # Write to pandas dataframe.
-    data_dictionary = {
-        "state_fips" : state_fips_codes,
-        "county_fips" : county_fips_codes,
+    """Aggregate the data by county.
+
+    Since many rows correspond to each county, the rows
+    need to be aggregated by county, which is defined by a 
+    5-digit code, state_fips + county_fips, e.g. 01 + 506 -> 01506
+
+    This involves casting the data to a dataframe and adding the 
+    data by county. Note that in the resulting dataframe, the index
+    (df.index) will house the 5-digit county fips code.
+    """
+
+    # Write each individual row of data to a high-level dataframe
+    # object, for easier summarization. 
+    state_plus_county_fips = [
+            state_fips + county_fips 
+            for state_fips, county_fips 
+            in zip(state_fips_codes, county_fips_codes)
+            ]
+    individual_rows_data_dictionary = {
+        "county_fips" : state_plus_county_fips # 5 digits: state+county.
         "num_males" : numbers_of_males,
         "num_females" : numbers_of_females
-    }
-    df = pd.DataFrame(data=data_dictionary)
-    df["state_plus_county_fips"] = [s + c for s, c in zip(df.state_fips, df.county_fips)]
+        }
+    individual_rows_dataframe = pd.DataFrame(data=individual_rows_data_dictionary)
 
-    # Summarize (add) by state / county FIPS code.
-    data_by_county = df[["state_plus_county_fips", "num_males", "num_females"]].groupby(
-            "state_plus_county_fips").sum()
-    print(data_by_county)
+    # Summarize data by county, by adding multiple rows corresponding
+    # to the same county.
+    census_data_by_county = individual_rows_dataframe.groupby("county_fips").sum()
 
-    # Calculate proportion male.
-    data_by_county["proportion_male"] = data_by_county["num_males"] / (
-            data_by_county["num_males"] + data_by_county["num_females"])
+    # Calculate proportion male column (male / male+female)
+    proportions_male = [num_males / (num_males + num_females)
+            for num_males, num_females in 
+            zip(census_data_by_county.num_males, 
+            census_data_by_county.num_females)]
+    census_data_by_county["proportion_male"] = proportions_male
 
+
+    """Write gender by county to disk.
+
+    Note that we must be very careful with county fips codes, which 
+    can be 0-padded and must have width 5. 
+
+    Thus we write the dataframe 'by hand', ensuring that county fips 
+    codes are formatted properly.
+    """
 
     # Write output.
     of_p = "../data/census_gender_by_county.csv"
     with open(of_p, "w", newline="") as of:
-        w = csv.writer(of)
+    
+        csv_writer_object = csv.writer(of)
         header = ["county_fips", "prop_male"]
-        w.writerow(header)
-        for prop_male, county_fips in zip(data_by_county.proportion_male, data_by_county.index):
-            w.writerow([str(county_fips).zfill(5), prop_male])
+        csv_writer_object.writerow(header)
+        
+        for county_fips, prop_male in zip(census_data_by_county.index, census_data_by_county.proportion_male):
+            county_fips_padded = str(county_fips).zfill(5)
+            data_row = [county_fips_padded, prop_male]
+            csv_writer_object.writerow(data_row)
 
 def preprocess_distancing_data():
     
