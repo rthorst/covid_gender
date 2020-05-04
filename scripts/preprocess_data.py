@@ -183,46 +183,58 @@ def preprocess_distancing_data():
             csv_writer_object.writerow(data_row)
 
 def merge_census_and_distancing_data():
+    """ Write census and social distancing data to a single file.
+
+    Input files
+    -----------
+    ../data/safegraph_aggregated_4_24_by_county.csv
+    ../data/census_gender_by_county.csv
+
+    Output file
+    ---------
+    ../data/census_and_safegraph_data_merged.csv
+    """
 
     # Load census and distancing data.
     SAFEGRAPH_DATA_P = "../data/safegraph_aggregated_4_24_by_county.csv"
     CENSUS_DATA_P = "../data/census_gender_by_county.csv"
     safegraph_dataframe = pd.read_csv(SAFEGRAPH_DATA_P)
     census_dataframe = pd.read_csv(CENSUS_DATA_P)
-
-    # Preprocess the primary keys - FIPS codes - so that they match exactly.
-    census_dataframe["county_fips"] = [str(unpadded_fips_code).zfill(5) 
-            for unpadded_fips_code 
-            in census_dataframe["county_fips"]] # zero-pad FIPS codes.
-    safegraph_dataframe["county_fips"] = [str(unpadded_fips_code).zfill(5)
-            for unpadded_fips_code
-            in safegraph_dataframe["county_fips"]] # zero-pad FIPS codes.
-    
-    print(safegraph_dataframe.head())
-    print(census_dataframe.head())
+   
+    # (0-pad county fips code to 5 digits e.g. 1001 -> 01001)
+    safegraph_dataframe["county_fips"] = [str(unpadded_fips).zfill(5) for 
+            unpadded_fips in safegraph_dataframe["county_fips"]]
+    census_dataframe["county_fips"] = [str(unpadded_fips).zfill(5) for 
+            unpadded_fips in census_dataframe["county_fips"]]
     
     # Merge census and distancing data.
-    fips_to_proportion_stayed_at_home = {}
-    for county_fips, proportion_stayed_at_home in safegraph_dataframe[["county_fips", "proportion_stayed_at_home"]].values:
-        fips_to_proportion_stayed_at_home[county_fips] = proportion_stayed_at_home
-    
-    
-    proportion_stayed_at_home = []
-    for county_fips in census_dataframe["county_fips"]:
-        if county_fips in fips_to_proportion_stayed_at_home:
-            proportion_stayed_at_home.append(
-                    fips_to_proportion_stayed_at_home[county_fips])
-        else:
-            proportion_stayed_at_home.append(np.nan)
-    census_dataframe["proportion_stayed_at_home"] = proportion_stayed_at_home
-    merged_dataframe = census_dataframe.dropna()
+    county_fips_to_prop_stayed_home = {fips : stay_home for fips, stay_home in 
+            zip(safegraph_dataframe.county_fips, 
+                safegraph_dataframe.proportion_stayed_at_home)
+        }
+    county_fips_to_prop_male = {fips : male for fips, male in 
+            zip(census_dataframe.county_fips, 
+                census_dataframe.prop_male)
+        }
+
 
     # Write the merged dataframe.
     of_p = "../data/census_and_safegraph_data_merged.csv"
-    merged_dataframe.to_csv(of_p)
-    print(merged_dataframe.head())
-    print(len(merged_dataframe))
+    with open(of_p, "w", newline="") as of:
 
+        csv_writer_object = csv.writer(of)
+        header = ["county_fips", "proportion_male", "proportion_stayed_at_home"]
+        csv_writer_object.writerow(header)
+
+        for county_fips, prop_male in county_fips_to_prop_male.items():
+
+            try:
+                prop_stayed_at_home = county_fips_to_prop_stayed_home[county_fips]
+                data_row = [county_fips, prop_male, prop_stayed_at_home]
+                csv_writer_object.writerow(data_row)
+    
+            except KeyError: # non-shared county, this is expected. 
+                pass
 
 def analyze_merged_data():
 
@@ -236,6 +248,6 @@ def analyze_merged_data():
 
 if __name__ == "__main__":
     #preprocess_census_data()
-    preprocess_distancing_data()
-    #merge_census_and_distancing_data()
+    #preprocess_distancing_data()
+    merge_census_and_distancing_data()
     #analyze_merged_data()
