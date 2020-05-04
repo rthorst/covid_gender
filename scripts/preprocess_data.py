@@ -122,7 +122,17 @@ def preprocess_census_data():
 
 
 
-def preprocess_distancing_data():
+def preprocess_distancing_data(date="04-23"):
+    """preprocess social distacing data
+
+    parameters
+    -----------
+    date (string) e.g. 04-23 which should be reflected in the file prefix.
+
+    output file
+    -----------
+    ../data/safegraph_aggregated_{}_by_county.csv
+    """
     
     # Load safegraph data.
     safegraph_data_p = "../data/safegraph/2020-04-23-social-distancing.csv"
@@ -171,7 +181,7 @@ def preprocess_distancing_data():
                 prop_completely_at_home)
 
     # Save data.
-    of_p = "../data/safegraph_aggregated_4_24_by_county.csv"
+    of_p = "../data/safegraph_aggregated_{}_by_county.csv".format(date)
     with open(of_p, "w", newline="") as of:
 
         csv_writer_object = csv.writer(of)
