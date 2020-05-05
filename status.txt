@@ -9,6 +9,17 @@ as an explanation for covid.
     this internally replicated over 5/5 different days in april
     rho -0.06 - -0.16
     )
+
+
 2. If so, does this explain different rates of COVID infection?
 
+    Every county has a gender gap in men vs. women
+    It also has a behavior gap in men vs. women (distancing).
 
+    Are these correlated?
+    That is, in areas where men socially distance less, is there also a 
+    gap in infections?
+
+    Thus I need:
+    --> Data (the most granular I can get) about COVID by sex.
+    
