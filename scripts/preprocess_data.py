@@ -255,12 +255,64 @@ def analyze_merged_data():
     rho, p = spearmanr(df.proportion_male, df.proportion_stayed_at_home)
     print("correlation of male with stay at home, rho = {:.4f} p = {:.4f}".format(rho, p))
 
+
+def preprocess_covid_deaths_data():
+
+    # Load table of COVID deaths.
+    covid_data_p = "../data/Provisional_COVID-19_Death_Counts_by_Sex__Age__and_State.csv"
+    covid_raw_dataframe = pd.read_csv(covid_data_p)
+
+    # Map states to male and female deaths.
+    state_to_male_deaths = {}
+    state_to_female_deaths = {}
+    data_colnames = ["State", "Age group", "COVID-19 Deaths"]
+    for state, age_group, covid_deaths in (
+        covid_raw_dataframe[data_colnames]).values:
+    
+        # age group "Female, all ages"   "Male, all ages"
+        if age_group == "Female, all ages":
+            state_to_female_deaths[state] = covid_deaths
+        elif age_group == "Male, all ages":
+            state_to_male_deaths[state] = covid_deaths
+
+    # Write table:
+    # State   Male Deaths   Female Deaths    Male/Total
+    of_p = "../data/covid_deaths_by_state_and_gender_preprocessed.csv"
+    with open(of_p, "w", newline="") as of:
+
+        # Write header.
+        w = csv.writer(of)
+        header = ["state", "male_deaths", "female_deaths", "male_deaths_over_total_deaths"]
+        w.writerow(header)
+
+        # Write data rows.
+        for state, male_deaths in state_to_male_deaths.items():
+            
+            female_deaths = state_to_female_deaths[state]
+            
+            # special handling is required in case of 0 or nan death counts.
+            VALID_MALE_DEATHS = not np.isnan(male_deaths) and male_deaths > 0
+            VALID_FEMALE_DEATHS = not np.isnan(female_deaths) and female_deaths > 0
+
+            if VALID_MALE_DEATHS and VALID_FEMALE_DEATHS:
+                prop_male_deaths = male_deaths / (male_deaths + female_deaths)
+            else:
+                prop_male_deaths = np.nan
+
+            data_row = [state, male_deaths, female_deaths, prop_male_deaths]
+            w.writerow(data_row)
+
+
 if __name__ == "__main__":
     #preprocess_census_data()
 
+    """
     days = ["01", "07", "13", "23", "24"]
     for day in days:
         date = "04-{}".format(day)
         preprocess_distancing_data(date)
         merge_census_and_distancing_data(date)
         analyze_merged_data()
+    """
+
+    preprocess_covid_deaths_data()
