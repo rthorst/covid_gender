@@ -303,6 +303,39 @@ def preprocess_covid_deaths_data():
             w.writerow(data_row)
 
 
+def aggregate_distancing_by_state():
+
+    # Load social distancing data.
+    DATA_P = "../data/census_and_safegraph_data_merged.csv"
+    df = pd.read_csv(DATA_P)
+
+    # Load a mapping of state fips codes to state names.
+    FIPS_CODES_P = "../data/state_fips_codes.csv"
+    fips_df = pd.read_csv(FIPS_CODES_P)
+    fips_code_to_state_name = {}
+    for state, fips in fips_df.values:
+        fips_code_to_state_name[str(fips)] = state
+    
+    # Add a column to the social distancing data for state name.
+    state_fips_codes = [str(county_fips)[:2] for county_fips in df.county_fips]
+    state_names = [fips_code_to_state_name[fips] for fips in state_fips_codes]
+    df["state"] = state_names
+
+    keep_colnames = ["state", "proportion_male", "proportion_stayed_at_home"]
+    df = df[keep_colnames]
+
+    # Aggregate gender (prop male) and distancing by state.
+    df = df.groupby("state").mean()
+    
+    # Save results.
+    of_p = "../data/census_and_safegraph_aggregated_by_state.csv"
+    df.to_csv(of_p)
+
+def merge_covid_and_distancing_data():
+
+    # Load both datasets.
+
+
 if __name__ == "__main__":
     #preprocess_census_data()
 
@@ -315,4 +348,5 @@ if __name__ == "__main__":
         analyze_merged_data()
     """
 
-    preprocess_covid_deaths_data()
+    #preprocess_covid_deaths_data()
+    #aggregate_distancing_by_state()
