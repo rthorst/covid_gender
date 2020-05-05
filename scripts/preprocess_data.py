@@ -334,7 +334,24 @@ def aggregate_distancing_by_state():
 def merge_covid_and_distancing_data():
 
     # Load both datasets.
+    covid_df = pd.read_csv("../data/covid_deaths_by_state_and_gender_preprocessed.csv")
+    distancing_df = pd.read_csv("../data/census_and_safegraph_aggregated_by_state.csv")
 
+    # Add a "total deaths" column.
+    covid_df["total_deaths"] = covid_df.male_deaths + covid_df.female_deaths
+
+    # Merge datasets.
+    state_to_total_covid_deaths = {
+            state : deaths for state, deaths in 
+            zip(covid_df.state, covid_df.total_deaths)} 
+    merged = distancing_df
+    merged["total_deaths"] = [state_to_total_covid_deaths[state] 
+            for state in merged.state]
+    
+    merged = merged.dropna()
+
+    # Correlate.
+    print(merged.corr())
 
 if __name__ == "__main__":
     #preprocess_census_data()
@@ -350,3 +367,4 @@ if __name__ == "__main__":
 
     #preprocess_covid_deaths_data()
     #aggregate_distancing_by_state()
+    merge_covid_and_distancing_data()
