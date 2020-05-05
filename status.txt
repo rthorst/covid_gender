@@ -1,9 +1,14 @@
 High-level plan.
 
-1. Do men socially distance less?
-    [I think so: tested for one or two days
-     Try it for a lot of days]
+TODO NEXT: figure out how you can test gender difference in social distancing
+as an explanation for covid.
 
+1. Do men socially distance less?
+    (yes:
+    in counties with more men there is less social distancing.
+    this internally replicated over 5/5 different days in april
+    rho -0.06 - -0.16
+    )
 2. If so, does this explain different rates of COVID infection?
 
 
